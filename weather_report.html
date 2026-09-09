@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Weather Monitor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI','Microsoft JhengHei',sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);color:#e2e8f0;min-height:100vh;padding:20px}
+.ctn{max-width:1400px;margin:0 auto}
+.hdr{text-align:center;padding:30px 0 20px}
+.hdr h1{font-size:2.2em;background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.hdr .st{color:#94a3b8;font-size:.95em}
+.hdr .ut{color:#64748b;font-size:.85em;margin-top:4px}
+.mb{display:flex;align-items:center;gap:16px;padding:16px 24px;border-radius:12px;margin:20px 0}
+.mb-strong{background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid #dc2626}
+.mb-weak{background:linear-gradient(135deg,#1e3a5f,#1e40af33);border:1px solid #3b82f6}
+.mb-none{background:linear-gradient(135deg,#14532d33,#16a34a22);border:1px solid #22c55e44}
+.mi{font-size:2em}.mt{font-size:1.1em;font-weight:700;margin-bottom:4px}.md{font-size:.9em;color:#cbd5e1}
+.cg{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-top:20px}
+.card{background:linear-gradient(145deg,#1e293b,#334155);border:1px solid #475569;border-radius:16px;padding:24px;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4)}
+.card-error{opacity:.6;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:200px}
+.error-msg{color:#f87171;font-size:1.1em;margin-top:12px}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.flag{font-size:2em}.ci{flex:1}.cn{font-size:1.3em;font-weight:700}.ce{font-size:.8em;color:#94a3b8;display:block}.wi{font-size:2.5em}
+.tm{font-size:3em;font-weight:800;line-height:1;margin-bottom:4px}
+.ds{color:#94a3b8;font-size:1em;margin-bottom:16px}
+.dg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.di{background:#0f172a;border-radius:8px;padding:8px 12px}
+.dl{font-size:.75em;color:#64748b;display:block}.dv{font-size:.95em;font-weight:600}
+.hs{border-top:1px solid #475569;padding-top:12px}
+.ht{font-size:.8em;color:#64748b;margin-bottom:8px}
+.hc{display:flex;justify-content:space-around;align-items:flex-end;height:80px;gap:4px}
+.bw{display:flex;flex-direction:column;align-items:center;flex:1;cursor:pointer}
+.b{width:100%;max-width:28px;border-radius:4px 4px 0 0;min-height:3px}
+.bw:hover .b{opacity:.7}
+.bl{font-size:.65em;color:#64748b;margin-top:4px}
+.ft{text-align:center;color:#475569;font-size:.8em;margin-top:30px;padding:20px 0;border-top:1px solid #1e293b}
+@media(max-width:768px){.cg{grid-template-columns:1fr}.hdr h1{font-size:1.6em}.tm{font-size:2.4em}}
+</style>
+</head>
+<body>
+<div class="ctn">
+<div class="hdr"><h1>u{1F30D} u{5168}u{7403}u{5929}u{6C23}u{76E3}u{63A7}u{5100}u{8868}u{677F}</h1><div class="st">u{53F0}u{5317} u{00B7} u{53F0}u{4E2D} u{00B7} u{6771}u{4EAC} u{00B7} u{9996}u{723E} u{00B7} u{502B}u{6566} u{00B7} u{7D10}u{7D04}</div><div class="ut">u{66F4}u{65B0}u{6642}u{9593} 2026/09/09 14:19:24 | u{4E0B}u{6B21}u{66F4}u{65B0} 2026/09/09 17:19</div></div>
+<div class="mb mb-weak"><div class="mi">u{1F32C}u{FE0F}</div><div><div class="mt">u{6771}u{5317}u{5B63}u{98A8}u{52D5}u{614B}u{FF1A}u{6771}u{5317}u{98A8}u{5FAE}u{5F31}u{FF0C}u{6301}u{7E8C}u{89C0}u{5BDF}u{4E2D}</div><div class="md">Wind NNE, 11km/h, Temp 29u{00B0}C. Monitoring...</div></div></div>
+<div class="cg"><div class='card'>
+<div class='card-header'><span class='flag'>u{1F1F9}u{1F1FC}</span><div class='ci'><span class='cn'>u{53F0}u{5317}</span><span class='ce'>Taipei</span></div><span class='wi'>u{1F327}u{FE0F}</span></div>
+<div class='tm' style='color:#f59e0b'>29u{00B0}C</div>
+<div class='ds'>Patchy rain nearby</div>
+<div class='dg'>
+<div class='di'><span class='dl'>u{9AD4}u{611F}</span><span class='dv'>30u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{9AD8}u{4F4E}u{6EAB}</span><span class='dv'>22~29u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{6FD5}u{5EA6}</span><span class='dv'>51%</span></div>
+<div class='di'><span class='dl'>u{98A8}u{5411}</span><span class='dv'>NNE 11km/h</span></div>
+<div class='di'><span class='dl'>u{7D2B}u{5916}u{7DDA}</span><span class='dv'>UV 9</span></div>
+<div class='di'><span class='dl'>u{964D}u{96E8}u{6A5F}u{7387}</span><span class='dv' style='color:#f59e0b;font-weight:700'>Max 36%</span></div>
+</div>
+<div class='hs'><div class='ht'>u{9010}u{6642}u{964D}u{96E8}u{6A5F}u{7387} (%)</div><div class='hc'><div class='bw' title='0:00 | 23u{00B0}C | Rain 10%'><div class='b' style='height:10px;background:#22c55e'></div><div class='bl'>0</div></div><div class='bw' title='3:00 | 23u{00B0}C | Rain 21%'><div class='b' style='height:21px;background:#f59e0b'></div><div class='bl'>3</div></div><div class='bw' title='6:00 | 22u{00B0}C | Rain 8%'><div class='b' style='height:8px;background:#22c55e'></div><div class='bl'>6</div></div><div class='bw' title='9:00 | 27u{00B0}C | Rain 13%'><div class='b' style='height:13px;background:#22c55e'></div><div class='bl'>9</div></div><div class='bw' title='12:00 | 28u{00B0}C | Rain 18%'><div class='b' style='height:18px;background:#22c55e'></div><div class='bl'>12</div></div><div class='bw' title='15:00 | 28u{00B0}C | Rain 17%'><div class='b' style='height:17px;background:#22c55e'></div><div class='bl'>15</div></div><div class='bw' title='18:00 | 24u{00B0}C | Rain 36%'><div class='b' style='height:36px;background:#f59e0b'></div><div class='bl'>18</div></div><div class='bw' title='21:00 | 24u{00B0}C | Rain 20%'><div class='b' style='height:20px;background:#f59e0b'></div><div class='bl'>21</div></div></div></div>
+</div><div class='card'>
+<div class='card-header'><span class='flag'>u{1F1F9}u{1F1FC}</span><div class='ci'><span class='cn'>u{53F0}u{4E2D}</span><span class='ce'>Taichung</span></div><span class='wi'>u{26C5}</span></div>
+<div class='tm' style='color:#f97316'>30u{00B0}C</div>
+<div class='ds'>Partly Cloudy</div>
+<div class='dg'>
+<div class='di'><span class='dl'>u{9AD4}u{611F}</span><span class='dv'>30u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{9AD8}u{4F4E}u{6EAB}</span><span class='dv'>23~30u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{6FD5}u{5EA6}</span><span class='dv'>46%</span></div>
+<div class='di'><span class='dl'>u{98A8}u{5411}</span><span class='dv'>NNW 17km/h</span></div>
+<div class='di'><span class='dl'>u{7D2B}u{5916}u{7DDA}</span><span class='dv'>UV 9</span></div>
+<div class='di'><span class='dl'>u{964D}u{96E8}u{6A5F}u{7387}</span><span class='dv' style='color:#f59e0b;font-weight:700'>Max 21%</span></div>
+</div>
+<div class='hs'><div class='ht'>u{9010}u{6642}u{964D}u{96E8}u{6A5F}u{7387} (%)</div><div class='hc'><div class='bw' title='0:00 | 24u{00B0}C | Rain 20%'><div class='b' style='height:20px;background:#f59e0b'></div><div class='bl'>0</div></div><div class='bw' title='3:00 | 23u{00B0}C | Rain 21%'><div class='b' style='height:21px;background:#f59e0b'></div><div class='bl'>3</div></div><div class='bw' title='6:00 | 23u{00B0}C | Rain 9%'><div class='b' style='height:9px;background:#22c55e'></div><div class='bl'>6</div></div><div class='bw' title='9:00 | 26u{00B0}C | Rain 3%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>9</div></div><div class='bw' title='12:00 | 30u{00B0}C | Rain 2%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>12</div></div><div class='bw' title='15:00 | 29u{00B0}C | Rain 2%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>15</div></div><div class='bw' title='18:00 | 25u{00B0}C | Rain 13%'><div class='b' style='height:13px;background:#22c55e'></div><div class='bl'>18</div></div><div class='bw' title='21:00 | 24u{00B0}C | Rain 6%'><div class='b' style='height:6px;background:#22c55e'></div><div class='bl'>21</div></div></div></div>
+</div><div class='card'>
+<div class='card-header'><span class='flag'>u{1F1EF}u{1F1F5}</span><div class='ci'><span class='cn'>u{6771}u{4EAC}</span><span class='ce'>Tokyo</span></div><span class='wi'>u{1F327}u{FE0F}</span></div>
+<div class='tm' style='color:#f59e0b'>28u{00B0}C</div>
+<div class='ds'>Light rain shower</div>
+<div class='dg'>
+<div class='di'><span class='dl'>u{9AD4}u{611F}</span><span class='dv'>32u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{9AD8}u{4F4E}u{6EAB}</span><span class='dv'>23~28u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{6FD5}u{5EA6}</span><span class='dv'>87%</span></div>
+<div class='di'><span class='dl'>u{98A8}u{5411}</span><span class='dv'>SW 43km/h</span></div>
+<div class='di'><span class='dl'>u{7D2B}u{5916}u{7DDA}</span><span class='dv'>UV 3</span></div>
+<div class='di'><span class='dl'>u{964D}u{96E8}u{6A5F}u{7387}</span><span class='dv' style='color:#ef4444;font-weight:700'>Max 72%</span></div>
+</div>
+<div class='hs'><div class='ht'>u{9010}u{6642}u{964D}u{96E8}u{6A5F}u{7387} (%)</div><div class='hc'><div class='bw' title='0:00 | 28u{00B0}C | Rain 28%'><div class='b' style='height:28px;background:#f59e0b'></div><div class='bl'>0</div></div><div class='bw' title='3:00 | 28u{00B0}C | Rain 66%'><div class='b' style='height:66px;background:#ef4444'></div><div class='bl'>3</div></div><div class='bw' title='6:00 | 28u{00B0}C | Rain 35%'><div class='b' style='height:35px;background:#f59e0b'></div><div class='bl'>6</div></div><div class='bw' title='9:00 | 28u{00B0}C | Rain 57%'><div class='b' style='height:57px;background:#f97316'></div><div class='bl'>9</div></div><div class='bw' title='12:00 | 28u{00B0}C | Rain 45%'><div class='b' style='height:45px;background:#f97316'></div><div class='bl'>12</div></div><div class='bw' title='15:00 | 28u{00B0}C | Rain 48%'><div class='b' style='height:48px;background:#f97316'></div><div class='bl'>15</div></div><div class='bw' title='18:00 | 28u{00B0}C | Rain 72%'><div class='b' style='height:72px;background:#ef4444'></div><div class='bl'>18</div></div><div class='bw' title='21:00 | 27u{00B0}C | Rain 66%'><div class='b' style='height:66px;background:#ef4444'></div><div class='bl'>21</div></div></div></div>
+</div><div class='card'>
+<div class='card-header'><span class='flag'>u{1F1F0}u{1F1F7}</span><div class='ci'><span class='cn'>u{9996}u{723E}</span><span class='ce'>Seoul</span></div><span class='wi'>u{2601}u{FE0F}</span></div>
+<div class='tm' style='color:#22c55e'>22u{00B0}C</div>
+<div class='ds'>Overcast</div>
+<div class='dg'>
+<div class='di'><span class='dl'>u{9AD4}u{611F}</span><span class='dv'>22u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{9AD8}u{4F4E}u{6EAB}</span><span class='dv'>18~23u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{6FD5}u{5EA6}</span><span class='dv'>51%</span></div>
+<div class='di'><span class='dl'>u{98A8}u{5411}</span><span class='dv'>NE 5km/h</span></div>
+<div class='di'><span class='dl'>u{7D2B}u{5916}u{7DDA}</span><span class='dv'>UV 2</span></div>
+<div class='di'><span class='dl'>u{964D}u{96E8}u{6A5F}u{7387}</span><span class='dv' style='color:#22c55e;font-weight:700'>Max 15%</span></div>
+</div>
+<div class='hs'><div class='ht'>u{9010}u{6642}u{964D}u{96E8}u{6A5F}u{7387} (%)</div><div class='hc'><div class='bw' title='0:00 | 22u{00B0}C | Rain 5%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>0</div></div><div class='bw' title='3:00 | 20u{00B0}C | Rain 4%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>3</div></div><div class='bw' title='6:00 | 19u{00B0}C | Rain 15%'><div class='b' style='height:15px;background:#22c55e'></div><div class='bl'>6</div></div><div class='bw' title='9:00 | 19u{00B0}C | Rain 15%'><div class='b' style='height:15px;background:#22c55e'></div><div class='bl'>9</div></div><div class='bw' title='12:00 | 21u{00B0}C | Rain 12%'><div class='b' style='height:12px;background:#22c55e'></div><div class='bl'>12</div></div><div class='bw' title='15:00 | 22u{00B0}C | Rain 12%'><div class='b' style='height:12px;background:#22c55e'></div><div class='bl'>15</div></div><div class='bw' title='18:00 | 22u{00B0}C | Rain 10%'><div class='b' style='height:10px;background:#22c55e'></div><div class='bl'>18</div></div><div class='bw' title='21:00 | 18u{00B0}C | Rain 2%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>21</div></div></div></div>
+</div><div class='card'>
+<div class='card-header'><span class='flag'>u{1F1EC}u{1F1E7}</span><div class='ci'><span class='cn'>u{502B}u{6566}</span><span class='ce'>London</span></div><span class='wi'>u{2601}u{FE0F}</span></div>
+<div class='tm' style='color:#3b82f6'>12u{00B0}C</div>
+<div class='ds'>Overcast</div>
+<div class='dg'>
+<div class='di'><span class='dl'>u{9AD4}u{611F}</span><span class='dv'>10u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{9AD8}u{4F4E}u{6EAB}</span><span class='dv'>12~19u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{6FD5}u{5EA6}</span><span class='dv'>77%</span></div>
+<div class='di'><span class='dl'>u{98A8}u{5411}</span><span class='dv'>W 14km/h</span></div>
+<div class='di'><span class='dl'>u{7D2B}u{5916}u{7DDA}</span><span class='dv'>UV 0</span></div>
+<div class='di'><span class='dl'>u{964D}u{96E8}u{6A5F}u{7387}</span><span class='dv' style='color:#f59e0b;font-weight:700'>Max 21%</span></div>
+</div>
+<div class='hs'><div class='ht'>u{9010}u{6642}u{964D}u{96E8}u{6A5F}u{7387} (%)</div><div class='hc'><div class='bw' title='0:00 | 14u{00B0}C | Rain 7%'><div class='b' style='height:7px;background:#22c55e'></div><div class='bl'>0</div></div><div class='bw' title='3:00 | 13u{00B0}C | Rain 8%'><div class='b' style='height:8px;background:#22c55e'></div><div class='bl'>3</div></div><div class='bw' title='6:00 | 12u{00B0}C | Rain 21%'><div class='b' style='height:21px;background:#f59e0b'></div><div class='bl'>6</div></div><div class='bw' title='9:00 | 13u{00B0}C | Rain 17%'><div class='b' style='height:17px;background:#22c55e'></div><div class='bl'>9</div></div><div class='bw' title='12:00 | 18u{00B0}C | Rain 4%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>12</div></div><div class='bw' title='15:00 | 17u{00B0}C | Rain 13%'><div class='b' style='height:13px;background:#22c55e'></div><div class='bl'>15</div></div><div class='bw' title='18:00 | 17u{00B0}C | Rain 8%'><div class='b' style='height:8px;background:#22c55e'></div><div class='bl'>18</div></div><div class='bw' title='21:00 | 15u{00B0}C | Rain 4%'><div class='b' style='height:5px;background:#22c55e'></div><div class='bl'>21</div></div></div></div>
+</div><div class='card'>
+<div class='card-header'><span class='flag'>u{1F1FA}u{1F1F8}</span><div class='ci'><span class='cn'>u{7D10}u{7D04}</span><span class='ce'>New York</span></div><span class='wi'>u{2601}u{FE0F}</span></div>
+<div class='tm' style='color:#06b6d4'>19u{00B0}C</div>
+<div class='ds'>Overcast</div>
+<div class='dg'>
+<div class='di'><span class='dl'>u{9AD4}u{611F}</span><span class='dv'>19u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{9AD8}u{4F4E}u{6EAB}</span><span class='dv'>18~31u{00B0}C</span></div>
+<div class='di'><span class='dl'>u{6FD5}u{5EA6}</span><span class='dv'>88%</span></div>
+<div class='di'><span class='dl'>u{98A8}u{5411}</span><span class='dv'>WSW 6km/h</span></div>
+<div class='di'><span class='dl'>u{7D2B}u{5916}u{7DDA}</span><span class='dv'>UV 0</span></div>
+<div class='di'><span class='dl'>u{964D}u{96E8}u{6A5F}u{7387}</span><span class='dv' style='color:#f59e0b;font-weight:700'>Max 28%</span></div>
+</div>
+<div class='hs'><div class='ht'>u{9010}u{6642}u{964D}u{96E8}u{6A5F}u{7387} (%)</div><div class='hc'><div class='bw' title='0:00 | 20u{00B0}C | Rain 26%'><div class='b' style='height:26px;background:#f59e0b'></div><div class='bl'>0</div></div><div class='bw' title='3:00 | 18u{00B0}C | Rain 28%'><div class='b' style='height:28px;background:#f59e0b'></div><div class='bl'>3</div></div><div class='bw' title='6:00 | 22u{00B0}C | Rain 14%'><div class='b' style='height:14px;background:#22c55e'></div><div class='bl'>6</div></div><div class='bw' title='9:00 | 24u{00B0}C | Rain 7%'><div class='b' style='height:7px;background:#22c55e'></div><div class='bl'>9</div></div><div class='bw' title='12:00 | 28u{00B0}C | Rain 10%'><div class='b' style='height:10px;background:#22c55e'></div><div class='bl'>12</div></div><div class='bw' title='15:00 | 31u{00B0}C | Rain 7%'><div class='b' style='height:7px;background:#22c55e'></div><div class='bl'>15</div></div><div class='bw' title='18:00 | 30u{00B0}C | Rain 7%'><div class='b' style='height:7px;background:#22c55e'></div><div class='bl'>18</div></div><div class='bw' title='21:00 | 27u{00B0}C | Rain 11%'><div class='b' style='height:11px;background:#22c55e'></div><div class='bl'>21</div></div></div></div>
+</div></div>
+<div class="ft">Weather data from wttr.in | Auto-updated every 3 hours</div>
+</div>
+</body>
+</html>
