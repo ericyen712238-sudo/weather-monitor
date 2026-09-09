@@ -22,12 +22,12 @@ jobs:
           import urllib.request, json, datetime
 
           cities = [
-              {"name": "Taipei", "zh": "&#x53F0;&#x5317;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taipei"},
-              {"name": "Taichung", "zh": "&#x53F0;&#x4E2D;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taichung"},
-              {"name": "Tokyo", "zh": "&#x6771;&#x4EAC;", "flag": "&#x1F1EF;&#x1F1F5;", "q": "Tokyo"},
-              {"name": "Seoul", "zh": "&#x9996;&#x723E;", "flag": "&#x1F1F0;&#x1F1F7;", "q": "Seoul"},
-              {"name": "London", "zh": "&#x502B;&#x6566;", "flag": "&#x1F1EC;&#x1F1E7;", "q": "London"},
-              {"name": "New York", "zh": "&#x7D10;&#x7D04;", "flag": "&#x1F1FA;&#x1F1F8;", "q": "New+York"},
+              {"name": "Taipei", "zh": "&#x53F0;&#x5317;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taipei", "region": "tw"},
+              {"name": "Taichung", "zh": "&#x53F0;&#x4E2D;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taichung", "region": "tw"},
+              {"name": "Tokyo", "zh": "&#x6771;&#x4EAC;", "flag": "&#x1F1EF;&#x1F1F5;", "q": "Tokyo", "region": "jp"},
+              {"name": "Seoul", "zh": "&#x9996;&#x723E;", "flag": "&#x1F1F0;&#x1F1F7;", "q": "Seoul", "region": "kr"},
+              {"name": "London", "zh": "&#x502B;&#x6566;", "flag": "&#x1F1EC;&#x1F1E7;", "q": "London", "region": "eu"},
+              {"name": "New York", "zh": "&#x7D10;&#x7D04;", "flag": "&#x1F1FA;&#x1F1F8;", "q": "New+York", "region": "us"},
           ]
 
           deg = "&#xB0;"
@@ -70,8 +70,8 @@ jobs:
               if r >= 20: return "#f59e0b"
               return "#22c55e"
 
-          cards = ""
-          tpe_data = None
+          # Fetch all city data
+          weather = []
           for city in cities:
               try:
                   url = f"https://wttr.in/{city['q']}?format=j1"
@@ -79,71 +79,201 @@ jobs:
                       data = json.loads(resp.read().decode())
                   cur = data["current_condition"][0]
                   tod = data["weather"][0]
-                  temp = cur["temp_C"]
-                  feel = cur["FeelsLikeC"]
-                  desc = cur["weatherDesc"][0]["value"].strip()
-                  humid = cur["humidity"]
-                  wd = cur["winddir16Point"]
-                  ws = cur["windspeedKmph"]
-                  uv = cur["uvIndex"]
-                  maxT = tod["maxtempC"]
-                  minT = tod["mintempC"]
                   hourly = tod["hourly"]
                   rains = [int(h["chanceofrain"]) for h in hourly]
-                  maxR = max(rains)
-                  if city["name"] == "Taipei":
-                      tpe_data = {"wd": wd, "ws": ws, "temp": temp}
-                  ic = get_icon(desc)
-                  tc = temp_color(temp)
-                  rc = rain_color(maxR)
-                  bars = ""
-                  for h in hourly:
-                      ht = int(h["time"]) // 100
-                      hr = h["chanceofrain"]
-                      bh = max(5, int(hr))
-                      bc = rain_color(hr)
-                      bars += f"<div class='bw' title='{ht}:00 | {h['tempC']}{deg}C | Rain {hr}%'><div class='b' style='height:{bh}px;background:{bc}'></div><div class='bl'>{ht}</div></div>"
-                  cards += f"""<div class='card'>
-          <div class='card-header'><span class='flag'>{city['flag']}</span><div class='ci'><span class='cn'>{city['zh']}</span><span class='ce'>{city['name']}</span></div><span class='wi'>{ic}</span></div>
-          <div class='tm' style='color:{tc}'>{temp}{deg}C</div>
-          <div class='ds'>{desc}</div>
+                  weather.append({
+                      "city": city,
+                      "temp": int(cur["temp_C"]),
+                      "feel": int(cur["FeelsLikeC"]),
+                      "desc": cur["weatherDesc"][0]["value"].strip(),
+                      "humid": cur["humidity"],
+                      "wd": cur["winddir16Point"],
+                      "ws": int(cur["windspeedKmph"]),
+                      "uv": cur["uvIndex"],
+                      "maxT": tod["maxtempC"],
+                      "minT": tod["mintempC"],
+                      "maxRain": max(rains),
+                      "hourly": hourly,
+                      "err": None,
+                  })
+                  print(f"OK: {city['name']} {cur['temp_C']}C wind {cur['winddir16Point']} {cur['windspeedKmph']}km/h rain_max {max(rains)}%")
+              except Exception as e:
+                  weather.append({"city": city, "err": str(e)})
+                  print(f"FAIL: {city['name']} {e}")
+
+          # ============================================================
+          # ALERT DETECTION
+          # ============================================================
+          alerts = []
+
+          tw_cities = [w for w in weather if w.get("err") is None and w["city"]["region"] == "tw"]
+          all_ok = [w for w in weather if w.get("err") is None]
+
+          # --- 1. Typhoon Detection ---
+          typhoon_cities = [w for w in all_ok if w["ws"] >= 62]
+          if typhoon_cities:
+              names = ", ".join(w["city"]["name"] for w in typhoon_cities)
+              max_ws = max(w["ws"] for w in typhoon_cities)
+              alerts.append({
+                  "level": "danger",
+                  "icon": "&#x1F300;",
+                  "title": "&#x98B1;&#x98A8;&#x8B66;&#x5831;",
+                  "desc": f"&#x6975;&#x5F37;&#x98A8;&#x901F;&#x5075;&#x6E2C;&#xFF01;{names} &#x98A8;&#x901F;&#x9054; {max_ws}km/h&#x3002;&#x8ACB;&#x505A;&#x597D;&#x9632;&#x98B1;&#x6E96;&#x5099;&#xFF01;",
+              })
+
+          # --- 2. High Temp Alert (TW cities >= 36C) ---
+          hot_cities = [w for w in tw_cities if w["temp"] >= 36]
+          if hot_cities:
+              names = ", ".join(w["city"]["name"] for w in hot_cities)
+              max_t = max(w["temp"] for w in hot_cities)
+              alerts.append({
+                  "level": "danger",
+                  "icon": "&#x1F321;&#xFE0F;",
+                  "title": "&#x9AD8;&#x6EAB;&#x7279;&#x5831;",
+                  "desc": f"{names} &#x6C23;&#x6EAB;&#x9054; {max_t}{deg}C&#xFF0C;&#x8ACB;&#x6CE8;&#x610F;&#x9632;&#x66EC;&#x88DC;&#x6C34;&#xFF0C;&#x907F;&#x514D;&#x9577;&#x6642;&#x9593;&#x5728;&#x6236;&#x5916;&#x6D3B;&#x52D5;&#x3002;",
+              })
+
+          # --- 3. Low Temp Alert (TW cities <= 10C or feels <= 6C) ---
+          cold_cities = [w for w in tw_cities if w["temp"] <= 10 or w["feel"] <= 6]
+          if cold_cities:
+              names = ", ".join(w["city"]["name"] for w in cold_cities)
+              min_t = min(w["temp"] for w in cold_cities)
+              min_f = min(w["feel"] for w in cold_cities)
+              alerts.append({
+                  "level": "danger",
+                  "icon": "&#x1F976;",
+                  "title": "&#x4F4E;&#x6EAB;&#x7279;&#x5831;",
+                  "desc": f"{names} &#x6C23;&#x6EAB; {min_t}{deg}C&#xFF08;&#x9AD4;&#x611F; {min_f}{deg}C&#xFF09;&#xFF0C;&#x8ACB;&#x6CE8;&#x610F;&#x4FDD;&#x6696;&#xFF0C;&#x7559;&#x610F;&#x8001;&#x5E7C;&#x5B89;&#x5168;&#x3002;",
+              })
+
+          # --- 4. Strong Wind Alert (any city >= 40 km/h) ---
+          windy_cities = [w for w in all_ok if w["ws"] >= 40 and w["ws"] < 62]
+          if windy_cities:
+              names = ", ".join(w["city"]["name"] for w in windy_cities)
+              max_ws = max(w["ws"] for w in windy_cities)
+              alerts.append({
+                  "level": "warning",
+                  "icon": "&#x1F4A8;",
+                  "title": "&#x5F37;&#x98A8;&#x7279;&#x5831;",
+                  "desc": f"{names} &#x98A8;&#x901F;&#x9054; {max_ws}km/h&#xFF0C;&#x5916;&#x51FA;&#x8ACB;&#x6CE8;&#x610F;&#x5B89;&#x5168;&#xFF0C;&#x907F;&#x514D;&#x5728;&#x9AD8;&#x8655;&#x6216;&#x7A7A;&#x66E0;&#x8655;&#x505C;&#x7559;&#x3002;",
+              })
+
+          # --- 5. Heavy Rain Alert (any city max rain >= 70%) ---
+          rainy_cities = [w for w in all_ok if w["maxRain"] >= 70]
+          if rainy_cities:
+              names = ", ".join(w["city"]["name"] for w in rainy_cities)
+              max_r = max(w["maxRain"] for w in rainy_cities)
+              alerts.append({
+                  "level": "warning",
+                  "icon": "&#x26C8;&#xFE0F;",
+                  "title": "&#x5927;&#x96E8;&#x7279;&#x5831;",
+                  "desc": f"{names} &#x964D;&#x96E8;&#x6A5F;&#x7387;&#x9054; {max_r}%&#xFF0C;&#x8ACB;&#x651C;&#x5E36;&#x96E8;&#x5177;&#xFF0C;&#x6CE8;&#x610F;&#x4F4E;&#x7A92;&#x5730;&#x5340;&#x7A4D;&#x6C34;&#x3002;",
+              })
+
+          # --- 6. NE Monsoon (Taipei wind N/NE/NNE/ENE) ---
+          tpe = next((w for w in weather if w["city"]["name"] == "Taipei" and not w.get("err")), None)
+          if tpe:
+              wd = tpe["wd"]
+              isNE = wd in ("N","NE","NNE","ENE")
+              if isNE and tpe["ws"] >= 15:
+                  alerts.append({
+                      "level": "info",
+                      "icon": "&#x1F30A;",
+                      "title": "&#x6771;&#x5317;&#x5B63;&#x98A8;&#x589E;&#x5F37;",
+                      "desc": f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {tpe['ws']}km/h&#xFF0C;&#x6C23;&#x6EAB; {tpe['temp']}{deg}C&#x3002;&#x5317;&#x90E8;&#x8F49;&#x6DBC;&#xFF0C;&#x6CE8;&#x610F;&#x4FDD;&#x6696;&#x651C;&#x5E36;&#x96E8;&#x5177;&#x3002;",
+                  })
+              elif isNE:
+                  alerts.append({
+                      "level": "info",
+                      "icon": "&#x1F32C;&#xFE0F;",
+                      "title": "&#x6771;&#x5317;&#x98A8;&#x5FAE;&#x5F31;&#xFF0C;&#x6301;&#x7E8C;&#x89C0;&#x5BDF;&#x4E2D;",
+                      "desc": f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {tpe['ws']}km/h&#xFF0C;&#x6C23;&#x6EAB; {tpe['temp']}{deg}C&#x3002;&#x6301;&#x7E8C;&#x76E3;&#x63A7;&#x4E2D;...",
+                  })
+
+          # --- 7. SW Monsoon (Taipei wind S/SW/SSW/WSW) ---
+          if tpe:
+              wd = tpe["wd"]
+              isSW = wd in ("S","SW","SSW","WSW")
+              if isSW and tpe["ws"] >= 15:
+                  alerts.append({
+                      "level": "info",
+                      "icon": "&#x1F525;",
+                      "title": "&#x897F;&#x5357;&#x6C23;&#x6D41;&#x589E;&#x5F37;",
+                      "desc": f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {tpe['ws']}km/h&#xFF0C;&#x6C23;&#x6EAB; {tpe['temp']}{deg}C&#x3002;&#x5357;&#x90E8;&#x6CE8;&#x610F;&#x5348;&#x5F8C;&#x5C0D;&#x6D41;&#x96E8;&#xFF0C;&#x5C71;&#x5340;&#x8B66;&#x622E;&#x8C6A;&#x96E8;&#x3002;",
+                  })
+              elif isSW:
+                  alerts.append({
+                      "level": "info",
+                      "icon": "&#x1F32C;&#xFE0F;",
+                      "title": "&#x897F;&#x5357;&#x98A8;&#x5FAE;&#x5F31;",
+                      "desc": f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {tpe['ws']}km/h&#xFF0C;&#x6C23;&#x6EAB; {tpe['temp']}{deg}C&#x3002;",
+                  })
+
+          # No alerts at all
+          if not alerts:
+              alerts.append({
+                  "level": "ok",
+                  "icon": "&#x2705;",
+                  "title": "&#x76EE;&#x524D;&#x7121;&#x7279;&#x6B8A;&#x5929;&#x6C23;&#x8B66;&#x5831;",
+                  "desc": "&#x5404;&#x5730;&#x5929;&#x6C23;&#x72C0;&#x6CC1;&#x5747;&#x5728;&#x6B63;&#x5E38;&#x7BC4;&#x570D;&#x5167;&#x3002;",
+              })
+
+          # Build alert banners HTML
+          alert_colors = {
+              "danger":  "background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid #dc2626",
+              "warning": "background:linear-gradient(135deg,#78350f,#92400e);border:1px solid #f59e0b",
+              "info":    "background:linear-gradient(135deg,#1e3a5f,#1e40af33);border:1px solid #3b82f6",
+              "ok":      "background:linear-gradient(135deg,#14532d33,#16a34a22);border:1px solid #22c55e44",
+          }
+          alerts_html = ""
+          for a in alerts:
+              style = alert_colors.get(a["level"], alert_colors["info"])
+              alerts_html += f"""<div class="ab" style="{style}"><div class="ai">{a['icon']}</div><div><div class="at">{a['title']}</div><div class="ad">{a['desc']}</div></div></div>\n"""
+
+          # Build city cards
+          cards = ""
+          for w in weather:
+              if w.get("err"):
+                  cards += f"<div class='card card-error'><div class='card-header'><span class='flag'>{w['city']['flag']}</span><span class='cn'>{w['city']['zh']}</span></div><div class='error-msg'>&#x26A0;&#xFE0F; {w['err']}</div></div>\n"
+                  continue
+              ic = get_icon(w["desc"])
+              tc = temp_color(w["temp"])
+              rc = rain_color(w["maxRain"])
+              bars = ""
+              for h in w["hourly"]:
+                  ht = int(h["time"]) // 100
+                  hr = h["chanceofrain"]
+                  bh = max(5, int(hr))
+                  bc = rain_color(hr)
+                  bars += f"<div class='bw' title='{ht}:00 | {h['tempC']}{deg}C | Rain {hr}%'><div class='b' style='height:{bh}px;background:{bc}'></div><div class='bl'>{ht}</div></div>"
+              cards += f"""<div class='card'>
+          <div class='card-header'><span class='flag'>{w['city']['flag']}</span><div class='ci'><span class='cn'>{w['city']['zh']}</span><span class='ce'>{w['city']['name']}</span></div><span class='wi'>{ic}</span></div>
+          <div class='tm' style='color:{tc}'>{w['temp']}{deg}C</div>
+          <div class='ds'>{w['desc']}</div>
           <div class='dg'>
-          <div class='di'><span class='dl'>{lbl['feel']}</span><span class='dv'>{feel}{deg}C</span></div>
-          <div class='di'><span class='dl'>{lbl['range']}</span><span class='dv'>{minT}~{maxT}{deg}C</span></div>
-          <div class='di'><span class='dl'>{lbl['humid']}</span><span class='dv'>{humid}%</span></div>
-          <div class='di'><span class='dl'>{lbl['wind']}</span><span class='dv'>{wd} {ws}km/h</span></div>
-          <div class='di'><span class='dl'>{lbl['uv']}</span><span class='dv'>UV {uv}</span></div>
-          <div class='di'><span class='dl'>{lbl['rain']}</span><span class='dv' style='color:{rc};font-weight:700'>Max {maxR}%</span></div>
+          <div class='di'><span class='dl'>{lbl['feel']}</span><span class='dv'>{w['feel']}{deg}C</span></div>
+          <div class='di'><span class='dl'>{lbl['range']}</span><span class='dv'>{w['minT']}~{w['maxT']}{deg}C</span></div>
+          <div class='di'><span class='dl'>{lbl['humid']}</span><span class='dv'>{w['humid']}%</span></div>
+          <div class='di'><span class='dl'>{lbl['wind']}</span><span class='dv'>{w['wd']} {w['ws']}km/h</span></div>
+          <div class='di'><span class='dl'>{lbl['uv']}</span><span class='dv'>UV {w['uv']}</span></div>
+          <div class='di'><span class='dl'>{lbl['rain']}</span><span class='dv' style='color:{rc};font-weight:700'>Max {w['maxRain']}%</span></div>
           </div>
           <div class='hs'><div class='ht'>{lbl['hourly']}</div><div class='hc'>{bars}</div></div>
           </div>"""
-                  print(f"OK: {city['name']} {temp}C")
-              except Exception as e:
-                  cards += f"<div class='card card-error'><div class='card-header'><span class='flag'>{city['flag']}</span><span class='cn'>{city['zh']}</span></div><div class='error-msg'>&#x26A0;&#xFE0F; {e}</div></div>"
-                  print(f"FAIL: {city['name']} {e}")
-
-          mLevel = "none"; mIcon = "&#x2600;&#xFE0F;"
-          mTitle = "&#x76EE;&#x524D;&#x7121;&#x6771;&#x5317;&#x5B63;&#x98A8;&#x8DE1;&#x8C61;"
-          mDesc = ""
-          if tpe_data:
-              wd = tpe_data["wd"]; ws = tpe_data["ws"]; tp = tpe_data["temp"]
-              isNE = wd in ("N","NE","NNE","ENE")
-              if isNE and int(ws) >= 15:
-                  mLevel = "strong"; mIcon = "&#x1F30A;"
-                  mTitle = "&#x6771;&#x5317;&#x5B63;&#x98A8;&#x660E;&#x986F;&#x589E;&#x5F37;&#xFF01;"
-                  mDesc = f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {ws}km/h&#xFF0C;&#x6C23;&#x6EAB; {tp}{deg}C&#x3002;&#x5317;&#x90E8;&#x660E;&#x986F;&#x8F49;&#x6DBC;&#xFF0C;&#x6CE8;&#x610F;&#x4FDD;&#x6696;&#x651C;&#x5E36;&#x96E8;&#x5177;&#x3002;"
-              elif isNE:
-                  mLevel = "weak"; mIcon = "&#x1F32C;&#xFE0F;"
-                  mTitle = "&#x6771;&#x5317;&#x98A8;&#x5FAE;&#x5F31;&#xFF0C;&#x6301;&#x7E8C;&#x89C0;&#x5BDF;&#x4E2D;"
-                  mDesc = f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {ws}km/h&#xFF0C;&#x6C23;&#x6EAB; {tp}{deg}C&#x3002;&#x6301;&#x7E8C;&#x76E3;&#x63A7;&#x4E2D;..."
-              else:
-                  mDesc = f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {ws}km/h&#xFF0C;&#x6C23;&#x6EAB; {tp}{deg}C&#x3002;"
 
           pageTitle = "&#x1F30D; &#x5168;&#x7403;&#x5929;&#x6C23;&#x76E3;&#x63A7;&#x5100;&#x8868;&#x677F;"
           subtitle_text = "&#x53F0;&#x5317; &#xB7; &#x53F0;&#x4E2D; &#xB7; &#x6771;&#x4EAC; &#xB7; &#x9996;&#x723E; &#xB7; &#x502B;&#x6566; &#xB7; &#x7D10;&#x7D04;"
           updLabel = "&#x66F4;&#x65B0;&#x6642;&#x9593;&#xFF1A;"
           nextLabel = "&#x4E0B;&#x6B21;&#x66F4;&#x65B0;&#xFF1A;"
-          neLabel = "&#x6771;&#x5317;&#x5B63;&#x98A8;&#x52D5;&#x614B;&#xFF1A;"
+
+          # Count active alerts
+          danger_n = sum(1 for a in alerts if a["level"] == "danger")
+          warn_n = sum(1 for a in alerts if a["level"] == "warning")
+          alert_summary = ""
+          if danger_n > 0:
+              alert_summary += f" | <span style='color:#ef4444;font-weight:700'>&#x26D4; {danger_n} &#x7DCA;&#x6025;&#x8B66;&#x5831;</span>"
+          if warn_n > 0:
+              alert_summary += f" | <span style='color:#f59e0b;font-weight:700'>&#x26A0;&#xFE0F; {warn_n} &#x7279;&#x5831;</span>"
 
           html = f"""<!DOCTYPE html>
           <html lang="zh-TW">
@@ -159,11 +289,10 @@ jobs:
           .hdr h1{{font-size:2.2em;background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}}
           .hdr .st{{color:#94a3b8;font-size:.95em}}
           .hdr .ut{{color:#64748b;font-size:.85em;margin-top:4px}}
-          .mb{{display:flex;align-items:center;gap:16px;padding:16px 24px;border-radius:12px;margin:20px 0}}
-          .mb-strong{{background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid #dc2626}}
-          .mb-weak{{background:linear-gradient(135deg,#1e3a5f,#1e40af33);border:1px solid #3b82f6}}
-          .mb-none{{background:linear-gradient(135deg,#14532d33,#16a34a22);border:1px solid #22c55e44}}
-          .mi{{font-size:2em}}.mt{{font-size:1.1em;font-weight:700;margin-bottom:4px}}.md{{font-size:.9em;color:#cbd5e1}}
+          .alerts{{display:flex;flex-direction:column;gap:10px;margin:20px 0}}
+          .ab{{display:flex;align-items:center;gap:16px;padding:14px 24px;border-radius:12px;animation:alertPulse 3s ease-in-out infinite}}
+          @keyframes alertPulse{{0%,100%{{opacity:1}}50%{{opacity:.85}}}}
+          .ai{{font-size:2em;flex-shrink:0}}.at{{font-size:1.05em;font-weight:700;margin-bottom:2px}}.ad{{font-size:.88em;color:#cbd5e1}}
           .cg{{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-top:20px}}
           .card{{background:linear-gradient(145deg,#1e293b,#334155);border:1px solid #475569;border-radius:16px;padding:24px;transition:transform .2s,box-shadow .2s}}
           .card:hover{{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4)}}
@@ -189,8 +318,8 @@ jobs:
           </head>
           <body>
           <div class="ctn">
-          <div class="hdr"><h1>{pageTitle}</h1><div class="st">{subtitle_text}</div><div class="ut">{updLabel} {timestamp} | {nextLabel} {next_upd}</div></div>
-          <div class="mb mb-{mLevel}"><div class="mi">{mIcon}</div><div><div class="mt">{neLabel}{mTitle}</div><div class="md">{mDesc}</div></div></div>
+          <div class="hdr"><h1>{pageTitle}</h1><div class="st">{subtitle_text}</div><div class="ut">{updLabel} {timestamp} | {nextLabel} {next_upd}{alert_summary}</div></div>
+          <div class="alerts">{alerts_html}</div>
           <div class="cg">{cards}</div>
           <div class="ft">Weather data from wttr.in | Auto-updated every hour via GitHub Actions</div>
           </div>
@@ -199,24 +328,13 @@ jobs:
 
           with open("index.html", "w", encoding="utf-8") as f:
               f.write(html)
-          print("index.html generated successfully")
+          print(f"Generated with {len(alerts)} alert(s)")
           PYEOF
-
-      - name: Check generated file
-        run: |
-          echo "=== File info ==="
-          ls -la index.html
-          echo "=== Timestamp in file ==="
-          grep -o 'Updated.*|' index.html | head -1
 
       - name: Commit and push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add index.html
-          echo "=== Git status ==="
-          git status
-          echo "=== Git diff ==="
-          git diff --cached --stat
-          git commit -m "Update weather $(date -u +%Y-%m-%dT%H:%M)" || echo "No changes to commit"
-          git push || echo "Push failed"
+          git commit -m "Update weather $(date -u +%Y-%m-%dT%H:%M)" || echo "No changes"
+          git push
