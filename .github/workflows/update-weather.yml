@@ -1,19 +1,26 @@
 name: Update Weather
+
 on:
   schedule:
-    - cron: '0 * * * *'  # Every hour
-  workflow_dispatch:       # Manual trigger button
+    - cron: '0 * * * *'
+  workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   update-weather:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Fetch weather and generate HTML
         run: |
-          cat > generate.py << 'PYEOF'
+          python3 << 'PYEOF'
           import urllib.request, json, datetime
+
           cities = [
               {"name": "Taipei", "zh": "&#x53F0;&#x5317;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taipei"},
               {"name": "Taichung", "zh": "&#x53F0;&#x4E2D;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taichung"},
@@ -22,6 +29,7 @@ jobs:
               {"name": "London", "zh": "&#x502B;&#x6566;", "flag": "&#x1F1EC;&#x1F1E7;", "q": "London"},
               {"name": "New York", "zh": "&#x7D10;&#x7D04;", "flag": "&#x1F1FA;&#x1F1F8;", "q": "New+York"},
           ]
+
           deg = "&#xB0;"
           lbl = {
               "feel": "&#x9AD4;&#x611F;", "range": "&#x9AD8;&#x4F4E;&#x6EAB;",
@@ -29,9 +37,11 @@ jobs:
               "uv": "&#x7D2B;&#x5916;&#x7DDA;", "rain": "&#x964D;&#x96E8;&#x6A5F;&#x7387;",
               "hourly": "&#x9010;&#x6642;&#x964D;&#x96E8;&#x6A5F;&#x7387; (%)",
           }
+
           now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
           timestamp = now.strftime("%Y/%m/%d %H:%M:%S")
           next_upd = (now + datetime.timedelta(hours=1)).strftime("%Y/%m/%d %H:%M")
+
           def get_icon(desc):
               d = desc.lower()
               if "clear" in d or "sunny" in d: return "&#x2600;&#xFE0F;"
@@ -40,3 +50,173 @@ jobs:
               if "rain" in d: return "&#x1F327;&#xFE0F;"
               if "thunder" in d: return "&#x26C8;&#xFE0F;"
               if "snow" in d: return "&#x2744;&#xFE0F;"
+              if any(x in d for x in ["fog","mist","haze","smok"]): return "&#x1F32B;&#xFE0F;"
+              return "&#x1F324;&#xFE0F;"
+
+          def temp_color(t):
+              t = int(t)
+              if t >= 35: return "#ef4444"
+              if t >= 30: return "#f97316"
+              if t >= 25: return "#f59e0b"
+              if t >= 20: return "#22c55e"
+              if t >= 15: return "#06b6d4"
+              if t >= 10: return "#3b82f6"
+              return "#8b5cf6"
+
+          def rain_color(r):
+              r = int(r)
+              if r >= 60: return "#ef4444"
+              if r >= 40: return "#f97316"
+              if r >= 20: return "#f59e0b"
+              return "#22c55e"
+
+          cards = ""
+          tpe_data = None
+          for city in cities:
+              try:
+                  url = f"https://wttr.in/{city['q']}?format=j1"
+                  with urllib.request.urlopen(url, timeout=15) as resp:
+                      data = json.loads(resp.read().decode())
+                  cur = data["current_condition"][0]
+                  tod = data["weather"][0]
+                  temp = cur["temp_C"]
+                  feel = cur["FeelsLikeC"]
+                  desc = cur["weatherDesc"][0]["value"].strip()
+                  humid = cur["humidity"]
+                  wd = cur["winddir16Point"]
+                  ws = cur["windspeedKmph"]
+                  uv = cur["uvIndex"]
+                  maxT = tod["maxtempC"]
+                  minT = tod["mintempC"]
+                  hourly = tod["hourly"]
+                  rains = [int(h["chanceofrain"]) for h in hourly]
+                  maxR = max(rains)
+                  if city["name"] == "Taipei":
+                      tpe_data = {"wd": wd, "ws": ws, "temp": temp}
+                  ic = get_icon(desc)
+                  tc = temp_color(temp)
+                  rc = rain_color(maxR)
+                  bars = ""
+                  for h in hourly:
+                      ht = int(h["time"]) // 100
+                      hr = h["chanceofrain"]
+                      bh = max(5, int(hr))
+                      bc = rain_color(hr)
+                      bars += f"<div class='bw' title='{ht}:00 | {h['tempC']}{deg}C | Rain {hr}%'><div class='b' style='height:{bh}px;background:{bc}'></div><div class='bl'>{ht}</div></div>"
+                  cards += f"""<div class='card'>
+          <div class='card-header'><span class='flag'>{city['flag']}</span><div class='ci'><span class='cn'>{city['zh']}</span><span class='ce'>{city['name']}</span></div><span class='wi'>{ic}</span></div>
+          <div class='tm' style='color:{tc}'>{temp}{deg}C</div>
+          <div class='ds'>{desc}</div>
+          <div class='dg'>
+          <div class='di'><span class='dl'>{lbl['feel']}</span><span class='dv'>{feel}{deg}C</span></div>
+          <div class='di'><span class='dl'>{lbl['range']}</span><span class='dv'>{minT}~{maxT}{deg}C</span></div>
+          <div class='di'><span class='dl'>{lbl['humid']}</span><span class='dv'>{humid}%</span></div>
+          <div class='di'><span class='dl'>{lbl['wind']}</span><span class='dv'>{wd} {ws}km/h</span></div>
+          <div class='di'><span class='dl'>{lbl['uv']}</span><span class='dv'>UV {uv}</span></div>
+          <div class='di'><span class='dl'>{lbl['rain']}</span><span class='dv' style='color:{rc};font-weight:700'>Max {maxR}%</span></div>
+          </div>
+          <div class='hs'><div class='ht'>{lbl['hourly']}</div><div class='hc'>{bars}</div></div>
+          </div>"""
+                  print(f"OK: {city['name']} {temp}C")
+              except Exception as e:
+                  cards += f"<div class='card card-error'><div class='card-header'><span class='flag'>{city['flag']}</span><span class='cn'>{city['zh']}</span></div><div class='error-msg'>&#x26A0;&#xFE0F; {e}</div></div>"
+                  print(f"FAIL: {city['name']} {e}")
+
+          mLevel = "none"; mIcon = "&#x2600;&#xFE0F;"
+          mTitle = "&#x76EE;&#x524D;&#x7121;&#x6771;&#x5317;&#x5B63;&#x98A8;&#x8DE1;&#x8C61;"
+          mDesc = ""
+          if tpe_data:
+              wd = tpe_data["wd"]; ws = tpe_data["ws"]; tp = tpe_data["temp"]
+              isNE = wd in ("N","NE","NNE","ENE")
+              if isNE and int(ws) >= 15:
+                  mLevel = "strong"; mIcon = "&#x1F30A;"
+                  mTitle = "&#x6771;&#x5317;&#x5B63;&#x98A8;&#x660E;&#x986F;&#x589E;&#x5F37;&#xFF01;"
+                  mDesc = f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {ws}km/h&#xFF0C;&#x6C23;&#x6EAB; {tp}{deg}C&#x3002;&#x5317;&#x90E8;&#x660E;&#x986F;&#x8F49;&#x6DBC;&#xFF0C;&#x6CE8;&#x610F;&#x4FDD;&#x6696;&#x651C;&#x5E36;&#x96E8;&#x5177;&#x3002;"
+              elif isNE:
+                  mLevel = "weak"; mIcon = "&#x1F32C;&#xFE0F;"
+                  mTitle = "&#x6771;&#x5317;&#x98A8;&#x5FAE;&#x5F31;&#xFF0C;&#x6301;&#x7E8C;&#x89C0;&#x5BDF;&#x4E2D;"
+                  mDesc = f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {ws}km/h&#xFF0C;&#x6C23;&#x6EAB; {tp}{deg}C&#x3002;&#x6301;&#x7E8C;&#x76E3;&#x63A7;&#x4E2D;..."
+              else:
+                  mDesc = f"&#x98A8;&#x5411; {wd}&#xFF0C;&#x98A8;&#x901F; {ws}km/h&#xFF0C;&#x6C23;&#x6EAB; {tp}{deg}C&#x3002;"
+
+          pageTitle = "&#x1F30D; &#x5168;&#x7403;&#x5929;&#x6C23;&#x76E3;&#x63A7;&#x5100;&#x8868;&#x677F;"
+          subtitle_text = "&#x53F0;&#x5317; &#xB7; &#x53F0;&#x4E2D; &#xB7; &#x6771;&#x4EAC; &#xB7; &#x9996;&#x723E; &#xB7; &#x502B;&#x6566; &#xB7; &#x7D10;&#x7D04;"
+          updLabel = "&#x66F4;&#x65B0;&#x6642;&#x9593;&#xFF1A;"
+          nextLabel = "&#x4E0B;&#x6B21;&#x66F4;&#x65B0;&#xFF1A;"
+          neLabel = "&#x6771;&#x5317;&#x5B63;&#x98A8;&#x52D5;&#x614B;&#xFF1A;"
+
+          html = f"""<!DOCTYPE html>
+          <html lang="zh-TW">
+          <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1.0">
+          <title>Weather Monitor</title>
+          <style>
+          *{{margin:0;padding:0;box-sizing:border-box}}
+          body{{font-family:'Segoe UI','Microsoft JhengHei',sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);color:#e2e8f0;min-height:100vh;padding:20px}}
+          .ctn{{max-width:1400px;margin:0 auto}}
+          .hdr{{text-align:center;padding:30px 0 20px}}
+          .hdr h1{{font-size:2.2em;background:linear-gradient(90deg,#60a5fa,#a78bfa,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}}
+          .hdr .st{{color:#94a3b8;font-size:.95em}}
+          .hdr .ut{{color:#64748b;font-size:.85em;margin-top:4px}}
+          .mb{{display:flex;align-items:center;gap:16px;padding:16px 24px;border-radius:12px;margin:20px 0}}
+          .mb-strong{{background:linear-gradient(135deg,#7f1d1d,#991b1b);border:1px solid #dc2626}}
+          .mb-weak{{background:linear-gradient(135deg,#1e3a5f,#1e40af33);border:1px solid #3b82f6}}
+          .mb-none{{background:linear-gradient(135deg,#14532d33,#16a34a22);border:1px solid #22c55e44}}
+          .mi{{font-size:2em}}.mt{{font-size:1.1em;font-weight:700;margin-bottom:4px}}.md{{font-size:.9em;color:#cbd5e1}}
+          .cg{{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-top:20px}}
+          .card{{background:linear-gradient(145deg,#1e293b,#334155);border:1px solid #475569;border-radius:16px;padding:24px;transition:transform .2s,box-shadow .2s}}
+          .card:hover{{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,.4)}}
+          .card-error{{opacity:.6;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:200px}}
+          .error-msg{{color:#f87171;font-size:1.1em;margin-top:12px}}
+          .card-header{{display:flex;align-items:center;gap:12px;margin-bottom:16px}}
+          .flag{{font-size:2em}}.ci{{flex:1}}.cn{{font-size:1.3em;font-weight:700}}.ce{{font-size:.8em;color:#94a3b8;display:block}}.wi{{font-size:2.5em}}
+          .tm{{font-size:3em;font-weight:800;line-height:1;margin-bottom:4px}}
+          .ds{{color:#94a3b8;font-size:1em;margin-bottom:16px}}
+          .dg{{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}}
+          .di{{background:#0f172a;border-radius:8px;padding:8px 12px}}
+          .dl{{font-size:.75em;color:#64748b;display:block}}.dv{{font-size:.95em;font-weight:600}}
+          .hs{{border-top:1px solid #475569;padding-top:12px}}
+          .ht{{font-size:.8em;color:#64748b;margin-bottom:8px}}
+          .hc{{display:flex;justify-content:space-around;align-items:flex-end;height:80px;gap:4px}}
+          .bw{{display:flex;flex-direction:column;align-items:center;flex:1;cursor:pointer}}
+          .b{{width:100%;max-width:28px;border-radius:4px 4px 0 0;min-height:3px}}
+          .bw:hover .b{{opacity:.7}}
+          .bl{{font-size:.65em;color:#64748b;margin-top:4px}}
+          .ft{{text-align:center;color:#475569;font-size:.8em;margin-top:30px;padding:20px 0;border-top:1px solid #1e293b}}
+          @media(max-width:768px){{.cg{{grid-template-columns:1fr}}.hdr h1{{font-size:1.6em}}.tm{{font-size:2.4em}}}}
+          </style>
+          </head>
+          <body>
+          <div class="ctn">
+          <div class="hdr"><h1>{pageTitle}</h1><div class="st">{subtitle_text}</div><div class="ut">{updLabel} {timestamp} | {nextLabel} {next_upd}</div></div>
+          <div class="mb mb-{mLevel}"><div class="mi">{mIcon}</div><div><div class="mt">{neLabel}{mTitle}</div><div class="md">{mDesc}</div></div></div>
+          <div class="cg">{cards}</div>
+          <div class="ft">Weather data from wttr.in | Auto-updated every hour via GitHub Actions</div>
+          </div>
+          </body>
+          </html>"""
+
+          with open("index.html", "w", encoding="utf-8") as f:
+              f.write(html)
+          print("index.html generated successfully")
+          PYEOF
+
+      - name: Check generated file
+        run: |
+          echo "=== File info ==="
+          ls -la index.html
+          echo "=== Timestamp in file ==="
+          grep -o 'Updated.*|' index.html | head -1
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          echo "=== Git status ==="
+          git status
+          echo "=== Git diff ==="
+          git diff --cached --stat
+          git commit -m "Update weather $(date -u +%Y-%m-%dT%H:%M)" || echo "No changes to commit"
+          git push || echo "Push failed"
