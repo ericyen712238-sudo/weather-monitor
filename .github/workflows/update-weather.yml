@@ -1,0 +1,42 @@
+name: Update Weather
+on:
+  schedule:
+    - cron: '0 * * * *'  # Every hour
+  workflow_dispatch:       # Manual trigger button
+permissions:
+  contents: write
+jobs:
+  update-weather:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch weather and generate HTML
+        run: |
+          cat > generate.py << 'PYEOF'
+          import urllib.request, json, datetime
+          cities = [
+              {"name": "Taipei", "zh": "&#x53F0;&#x5317;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taipei"},
+              {"name": "Taichung", "zh": "&#x53F0;&#x4E2D;", "flag": "&#x1F1F9;&#x1F1FC;", "q": "Taichung"},
+              {"name": "Tokyo", "zh": "&#x6771;&#x4EAC;", "flag": "&#x1F1EF;&#x1F1F5;", "q": "Tokyo"},
+              {"name": "Seoul", "zh": "&#x9996;&#x723E;", "flag": "&#x1F1F0;&#x1F1F7;", "q": "Seoul"},
+              {"name": "London", "zh": "&#x502B;&#x6566;", "flag": "&#x1F1EC;&#x1F1E7;", "q": "London"},
+              {"name": "New York", "zh": "&#x7D10;&#x7D04;", "flag": "&#x1F1FA;&#x1F1F8;", "q": "New+York"},
+          ]
+          deg = "&#xB0;"
+          lbl = {
+              "feel": "&#x9AD4;&#x611F;", "range": "&#x9AD8;&#x4F4E;&#x6EAB;",
+              "humid": "&#x6FD5;&#x5EA6;", "wind": "&#x98A8;&#x5411;",
+              "uv": "&#x7D2B;&#x5916;&#x7DDA;", "rain": "&#x964D;&#x96E8;&#x6A5F;&#x7387;",
+              "hourly": "&#x9010;&#x6642;&#x964D;&#x96E8;&#x6A5F;&#x7387; (%)",
+          }
+          now = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))
+          timestamp = now.strftime("%Y/%m/%d %H:%M:%S")
+          next_upd = (now + datetime.timedelta(hours=1)).strftime("%Y/%m/%d %H:%M")
+          def get_icon(desc):
+              d = desc.lower()
+              if "clear" in d or "sunny" in d: return "&#x2600;&#xFE0F;"
+              if "partly" in d: return "&#x26C5;"
+              if "cloudy" in d or "overcast" in d: return "&#x2601;&#xFE0F;"
+              if "rain" in d: return "&#x1F327;&#xFE0F;"
+              if "thunder" in d: return "&#x26C8;&#xFE0F;"
+              if "snow" in d: return "&#x2744;&#xFE0F;"
